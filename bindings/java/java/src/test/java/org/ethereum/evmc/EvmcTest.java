@@ -9,9 +9,9 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 final class EvmcTest {
-  private static final String libEvmcPath = EvmcTest.class.getResource("/libevmc.so").getFile();
+  private static final String libEvmcPath = EvmcTest.class.getResource("/libevmc.dylib").getFile();
   private static final String exampleVmPath =
-      EvmcTest.class.getResource("/libexample-vm.so").getFile();
+      EvmcTest.class.getResource("/libexample-vm.dylib").getFile();
 
   @Test
   void testInitCloseDestroy() throws Exception {

@@ -6,17 +6,20 @@ plugins {
     id 'com.diffplug.gradle.spotless' version '3.29.0'
 }
 
+
 apply from: "${rootDir}/wrapper.gradle"
 allprojects {
     apply plugin: 'java-library'
     apply plugin: 'maven-publish'
+
+    sourceCompatibility = '1.11'
+    targetCompatibility = '1.11'
+    
     repositories {
         google()
         jcenter()
         mavenCentral()
     }
-    sourceCompatibility = '11'
-    targetCompatibility = '11'
     apply plugin: 'com.diffplug.gradle.spotless'
     spotless {
         java {
