@@ -8,6 +8,8 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
+import java.io.IOException;
+import java.time.Instant;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.eth.Address;
 import org.apache.tuweni.eth.Hash;
@@ -15,172 +17,175 @@ import org.apache.tuweni.units.bigints.UInt256;
 import org.apache.tuweni.units.ethereum.Gas;
 import org.apache.tuweni.units.ethereum.Wei;
 
-import java.io.IOException;
-import java.time.Instant;
-
 public class EthJsonModule extends SimpleModule {
 
-    static class HashSerializer extends StdSerializer<Hash> {
+  static class HashSerializer extends StdSerializer<Hash> {
 
-        HashSerializer() {
-            super(Hash.class);
-        }
-
-        @Override
-        public void serialize(Hash value, JsonGenerator gen, SerializerProvider provider) throws IOException {
-            gen.writeString(value.toHexString());
-        }
+    HashSerializer() {
+      super(Hash.class);
     }
 
-    static class AddressSerializer extends StdSerializer<Address> {
+    @Override
+    public void serialize(Hash value, JsonGenerator gen, SerializerProvider provider)
+        throws IOException {
+      gen.writeString(value.toHexString());
+    }
+  }
 
-        AddressSerializer() {
-            super(Address.class);
-        }
+  static class AddressSerializer extends StdSerializer<Address> {
 
-        @Override
-        public void serialize(Address value, JsonGenerator gen, SerializerProvider provider) throws IOException {
-            gen.writeString(value.toHexString());
-        }
+    AddressSerializer() {
+      super(Address.class);
     }
 
-    static class BytesSerializer extends StdSerializer<Bytes> {
+    @Override
+    public void serialize(Address value, JsonGenerator gen, SerializerProvider provider)
+        throws IOException {
+      gen.writeString(value.toHexString());
+    }
+  }
 
-        BytesSerializer() {
-            super(Bytes.class);
-        }
+  static class BytesSerializer extends StdSerializer<Bytes> {
 
-        @Override
-        public void serialize(Bytes value, JsonGenerator gen, SerializerProvider provider) throws IOException {
-            gen.writeString(value.toHexString());
-        }
+    BytesSerializer() {
+      super(Bytes.class);
     }
 
-    static class GasSerializer extends StdSerializer<Gas> {
+    @Override
+    public void serialize(Bytes value, JsonGenerator gen, SerializerProvider provider)
+        throws IOException {
+      gen.writeString(value.toHexString());
+    }
+  }
 
-        GasSerializer() {
-            super(Gas.class);
-        }
+  static class GasSerializer extends StdSerializer<Gas> {
 
-        @Override
-        public void serialize(Gas value, JsonGenerator gen, SerializerProvider provider) throws IOException {
-            gen.writeString(value.toBytes().toHexString());
-        }
+    GasSerializer() {
+      super(Gas.class);
     }
 
-    static class UInt256Serializer extends StdSerializer<UInt256> {
+    @Override
+    public void serialize(Gas value, JsonGenerator gen, SerializerProvider provider)
+        throws IOException {
+      gen.writeString(value.toBytes().toHexString());
+    }
+  }
 
-        UInt256Serializer() {
-            super(UInt256.class);
-        }
+  static class UInt256Serializer extends StdSerializer<UInt256> {
 
-        @Override
-        public void serialize(UInt256 value, JsonGenerator gen, SerializerProvider provider) throws IOException {
-            gen.writeString(value.toHexString());
-        }
+    UInt256Serializer() {
+      super(UInt256.class);
     }
 
-    static class InstantSerializer extends StdSerializer<Instant> {
+    @Override
+    public void serialize(UInt256 value, JsonGenerator gen, SerializerProvider provider)
+        throws IOException {
+      gen.writeString(value.toHexString());
+    }
+  }
 
-        InstantSerializer() {
-            super(Instant.class);
-        }
+  static class InstantSerializer extends StdSerializer<Instant> {
 
-        @Override
-        public void serialize(Instant value, JsonGenerator gen, SerializerProvider provider) throws IOException {
-            gen.writeNumber(value.toEpochMilli());
-        }
+    InstantSerializer() {
+      super(Instant.class);
     }
 
-    static class AddressDeserializer extends StdDeserializer<Address> {
+    @Override
+    public void serialize(Instant value, JsonGenerator gen, SerializerProvider provider)
+        throws IOException {
+      gen.writeNumber(value.toEpochMilli());
+    }
+  }
 
-        AddressDeserializer() {
-            super(Address.class);
-        }
+  static class AddressDeserializer extends StdDeserializer<Address> {
 
-        @Override
-        public Address deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
-            return Address.fromHexString(p.getValueAsString());
-        }
+    AddressDeserializer() {
+      super(Address.class);
     }
 
-    static class GasDeserializer extends StdDeserializer<Gas> {
+    @Override
+    public Address deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+      return Address.fromHexString(p.getValueAsString());
+    }
+  }
 
-        GasDeserializer() {
-            super(Gas.class);
-        }
+  static class GasDeserializer extends StdDeserializer<Gas> {
 
-        @Override
-        public Gas deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
-            return Gas.valueOf(UInt256.fromHexString(p.getValueAsString()));
-        }
+    GasDeserializer() {
+      super(Gas.class);
     }
 
-    static class WeiDeserializer extends StdDeserializer<Wei> {
+    @Override
+    public Gas deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+      return Gas.valueOf(UInt256.fromHexString(p.getValueAsString()));
+    }
+  }
 
-        WeiDeserializer() {
-            super(Wei.class);
-        }
+  static class WeiDeserializer extends StdDeserializer<Wei> {
 
-        @Override
-        public Wei deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
-            return Wei.valueOf(UInt256.fromHexString(p.getValueAsString()));
-        }
+    WeiDeserializer() {
+      super(Wei.class);
     }
 
-    static class BytesDeserializer extends StdDeserializer<Bytes> {
+    @Override
+    public Wei deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+      return Wei.valueOf(UInt256.fromHexString(p.getValueAsString()));
+    }
+  }
 
-        BytesDeserializer() {
-            super(Bytes.class);
-        }
+  static class BytesDeserializer extends StdDeserializer<Bytes> {
 
-        @Override
-        public Bytes deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
-            return Bytes.fromHexString(p.getValueAsString());
-        }
+    BytesDeserializer() {
+      super(Bytes.class);
     }
 
-    static class UInt256Deserializer extends StdDeserializer<UInt256> {
+    @Override
+    public Bytes deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+      return Bytes.fromHexString(p.getValueAsString());
+    }
+  }
 
-        UInt256Deserializer() {
-            super(UInt256.class);
-        }
+  static class UInt256Deserializer extends StdDeserializer<UInt256> {
 
-        @Override
-        public UInt256 deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
-            return UInt256.fromHexString(p.getValueAsString());
-        }
+    UInt256Deserializer() {
+      super(UInt256.class);
     }
 
-    static class AddressKeyDeserializer extends KeyDeserializer {
-
-        @Override
-        public Address deserializeKey(String key, DeserializationContext ctxt) throws IOException {
-            return Address.fromHexString(key);
-        }
+    @Override
+    public UInt256 deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+      return UInt256.fromHexString(p.getValueAsString());
     }
+  }
 
-    static class BytesKeyDeserializer extends KeyDeserializer {
+  static class AddressKeyDeserializer extends KeyDeserializer {
 
-        @Override
-        public Bytes deserializeKey(String key, DeserializationContext ctxt) throws IOException {
-            return Bytes.fromHexString(key);
-        }
+    @Override
+    public Address deserializeKey(String key, DeserializationContext ctxt) throws IOException {
+      return Address.fromHexString(key);
     }
+  }
 
-    public EthJsonModule() {
-        addSerializer(Hash.class, new HashSerializer());
-        addSerializer(Address.class, new AddressSerializer());
-        addSerializer(Bytes.class, new BytesSerializer());
-        addSerializer(Gas.class, new GasSerializer());
-        addSerializer(UInt256.class, new UInt256Serializer());
-        addSerializer(Instant.class, new InstantSerializer());
-        addKeyDeserializer(Bytes.class, new BytesKeyDeserializer());
-        addKeyDeserializer(Address.class, new AddressKeyDeserializer());
-        addDeserializer(Address.class, new AddressDeserializer());
-        addDeserializer(Gas.class, new GasDeserializer());
-        addDeserializer(Wei.class, new WeiDeserializer());
-        addDeserializer(UInt256.class, new UInt256Deserializer());
-        addDeserializer(Bytes.class, new BytesDeserializer());
+  static class BytesKeyDeserializer extends KeyDeserializer {
+
+    @Override
+    public Bytes deserializeKey(String key, DeserializationContext ctxt) throws IOException {
+      return Bytes.fromHexString(key);
     }
+  }
+
+  public EthJsonModule() {
+    addSerializer(Hash.class, new HashSerializer());
+    addSerializer(Address.class, new AddressSerializer());
+    addSerializer(Bytes.class, new BytesSerializer());
+    addSerializer(Gas.class, new GasSerializer());
+    addSerializer(UInt256.class, new UInt256Serializer());
+    addSerializer(Instant.class, new InstantSerializer());
+    addKeyDeserializer(Bytes.class, new BytesKeyDeserializer());
+    addKeyDeserializer(Address.class, new AddressKeyDeserializer());
+    addDeserializer(Address.class, new AddressDeserializer());
+    addDeserializer(Gas.class, new GasDeserializer());
+    addDeserializer(Wei.class, new WeiDeserializer());
+    addDeserializer(UInt256.class, new UInt256Deserializer());
+    addDeserializer(Bytes.class, new BytesDeserializer());
+  }
 }

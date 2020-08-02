@@ -57,7 +57,6 @@ class EVMReferenceTest {
         try {
           url.openConnection().getInputStream().use { input -> prepareTests(input) }
         } catch (e: IOException) {
-          e.printStackTrace()
           throw UncheckedIOException(e)
         }
       }
@@ -69,47 +68,7 @@ class EVMReferenceTest {
       val typeRef = object : TypeReference<HashMap<String, JsonReferenceTest>>() {}
       val allTests: Map<String, JsonReferenceTest> = mapper.readValue(input, typeRef)
       return allTests
-        .entries.filter {
-        !arrayOf(
-          "push32AndSuicide",
-          "ackermann33",
-          "loop-divadd-unr100-10M",
-          "loop-exp-32b-100k",
-          "loop-mulmod-2M",
-          "loop-add-10M",
-          "loop-divadd-10M",
-          "loop-mul",
-          "TestNameRegistrator",
-          "suicide",
-          "suicide0",
-          "suicideSendEtherToMe",
-          "suicideNotExistingAccount",
-          "JDfromStorageDynamicJump1",
-          "JDfromStorageDynamicJumpi1_jumpdest",
-          "JDfromStorageDynamicJump0_AfterJumpdest3",
-          "JDfromStorageDynamicJumpiAfterStop",
-          "DyanmicJump0_outOfBoundary",
-          "JDfromStorageDynamicJumpi1",
-          "JDfromStorageDynamicJumpi0",
-          "JDfromStorageDynamicJump0_jumpdest2",
-          "JDfromStorageDynamicJumpifInsidePushWithJumpDest",
-          "JDfromStorageDynamicJumpiOutsideBoundary",
-          "JDfromStorageDynamicJumpInsidePushWithJumpDest",
-          "JDfromStorageDynamicJump0_jumpdest0",
-          "JDfromStorageDynamicJumpInsidePushWithoutJumpDest",
-          "JDfromStorageDynamicJumpifInsidePushWithoutJumpDest",
-          "JDfromStorageDynamicJump0_AfterJumpdest",
-          "JDfromStorageDynamicJump0_withoutJumpdest",
-          //"calldatacopy0",
-          "calldatacopy1",
-          "calldatacopy0_return",
-          "calldatacopy1_return",
-          "calldatacopy_sec",
-          "calldataload0",
-          "calldataload1",
-                "origin"
-        ).contains(it.key)
-      }
+        .entries
         .stream()
         .map { entry ->
           Arguments.of(entry.key, entry.value)
@@ -126,7 +85,7 @@ class EVMReferenceTest {
 
     if (isMacOs) {
       evmcFile = EVMReferenceTest::class.java.getResource("/libevmc.dylib").file
-      evmOneVm = EVMReferenceTest::class.java.getResource("/libevmone.0.5.0.dylib").file
+      evmOneVm = EVMReferenceTest::class.java.getResource("/libevmone.0.6.0-dev.dylib").file
     } else {
       evmcFile = EVMReferenceTest::class.java.getResource("/libevmc.so").file
       evmOneVm = EVMReferenceTest::class.java.getResource("/libevmone.so.0.5.0").file
@@ -139,7 +98,7 @@ class EVMReferenceTest {
   fun runReferenceTest(testName: String, test: JsonReferenceTest) {
     assertNotNull(testName)
     println(testName)
-    val vm = EthereumVirtualMachine(evmcFile, evmOneVm, env = test.env!!, gasPrice = test.exec?.gasPrice!!)
+    val vm = EthereumVirtualMachine(evmcFile, evmOneVm, env = test.env!!, gasPrice = test.exec?.gasPrice!!, options = mapOf(Pair("verbose", "3")))
     test.pre!!.forEach { address, state ->
       runBlocking {
         val tree = MerklePatriciaTrie.storingBytes()
@@ -188,6 +147,8 @@ class EVMReferenceTest {
           || testName.equals("gasOverFlow")
           || testName.equals("DynamicJump1")
           || testName.equals("BlockNumberDynamicJump1")
+                || testName.equals("JDfromStorageDynamicJump1")
+                || testName.equals("JDfromStorageDynamicJumpi0")
         ) {
           assertEquals(EVMExecutionStatusCode.EVMC_BAD_JUMP_DESTINATION, result.statusCode)
         } else if (testName.contains("underflow",true)
@@ -213,6 +174,7 @@ class EVMReferenceTest {
           || testName.equals("sha3_5")
           || testName.equals("sha3_6")
           || testName.equals("sha3_bigSize")
+                || testName.equals("ackermann33")
         ) {
           assertEquals(EVMExecutionStatusCode.EVMC_OUT_OF_GAS, result.statusCode)
         } else if (testName.contains("stacklimit", true)) {
@@ -226,8 +188,9 @@ class EVMReferenceTest {
           runBlocking {
             assertTrue(vm.accounts.containsKey(address))
             val accountState = vm.accounts.get(address)
-            assertEquals(state.balance, accountState!!.balance)
-            assertEquals(state.nonce, accountState.nonce)
+            val balance = accountState?.balance?.add(result.hostContext.balanceChanges.get(address) ?: Wei.valueOf(0)) ?: Wei.valueOf(0)
+            assertEquals(state.balance, balance)
+            assertEquals(state.nonce, accountState!!.nonce)
           }
         }
       }

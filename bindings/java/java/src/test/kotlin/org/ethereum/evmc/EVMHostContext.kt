@@ -9,6 +9,7 @@ import org.apache.tuweni.bytes.Bytes32
 import org.apache.tuweni.eth.Address
 import org.apache.tuweni.eth.Hash
 import org.apache.tuweni.eth.Log
+import org.apache.tuweni.trie.MerklePatriciaTrie
 import org.apache.tuweni.units.bigints.UInt256
 import org.apache.tuweni.units.ethereum.Gas
 import org.apache.tuweni.units.ethereum.Wei
@@ -25,7 +26,6 @@ class EVMHostContext(
         val destination: Address,
         val value: Bytes,
         val code: Bytes,
-        val inputData: Bytes,
         val gas: Gas
 ) : HostContext {
 
@@ -33,11 +33,20 @@ class EVMHostContext(
         private val logger = LoggerFactory.getLogger(EVMHostContext::class.java)
     }
 
-    var blockHash : Hash? = null
+    private val buffers = mutableListOf<ByteBuffer>()
+
+    var blockHash: Hash? = null
     val accountChanges = HashMap<Address, HashMap<Bytes, Bytes>>()
     val logs = mutableListOf<Log>()
     val accountsToDestroy = mutableListOf<Address>()
     val balanceChanges = HashMap<Address, Wei>()
+
+    private fun alloc(size: Int): ByteBuffer {
+        val buffer = ByteBuffer.allocateDirect(size)
+        buffers.add(buffer)
+        return buffer
+    }
+
     /**
      * Check account existence function.
      *
@@ -70,9 +79,9 @@ class EVMHostContext(
         val value = accountChanges[address]?.get(key)
         logger.info("Found value $value")
         return@runBlocking if (value == null) {
-            ByteBuffer.allocateDirect(32).put(ByteArray(32))
+            alloc(32).put(ByteArray(32))
         } else {
-            ByteBuffer.allocateDirect(value.size()).put(value.toArrayUnsafe())
+            alloc(value.size()).put(value.toArrayUnsafe())
         }
     }
 
@@ -143,14 +152,12 @@ class EVMHostContext(
      */
     override fun getBalance(addressBytes: ByteArray): ByteBuffer = runBlocking {
         logger.trace("Entering getBalance")
-        val response = ByteBuffer.allocateDirect(32).put(ByteArray(32))
-
         val address = Address.fromBytes(Bytes.wrap(addressBytes))
         val balance = balanceChanges[address]
         balance?.let {
-            return@runBlocking response.put(it.toBytes().toArrayUnsafe())
+            return@runBlocking alloc(32).put(it.toBytes().toArrayUnsafe())
         }
-
+        val response = alloc(0)
         response
     }
 
@@ -184,7 +191,7 @@ class EVMHostContext(
     override fun getCodeHash(address: ByteArray): ByteBuffer = runBlocking {
         logger.trace("Entering getCodeHash")
         val code = vm.accountCodes[Address.fromBytes(Bytes.wrap(address))]
-        val response = ByteBuffer.allocateDirect(32)
+        val response = alloc(32)
         code?.let { response.put(Hash.hash(it).toArrayUnsafe()) }
         response
     }
@@ -203,7 +210,10 @@ class EVMHostContext(
      */
     override fun getCode(address: ByteArray): ByteBuffer = runBlocking {
         logger.trace("Entering getCode")
-        TODO()
+        val code = vm.accountCodes[Address.fromBytes(Bytes.wrap(address))]
+        val response = alloc(code?.size() ?: 0)
+        code?.let { response.put(it.toArrayUnsafe()) }
+        response
     }
 
     /**
@@ -220,14 +230,16 @@ class EVMHostContext(
         logger.trace("Entering selfdestruct")
         val addr = Address.fromBytes(Bytes.wrap(address))
         accountsToDestroy.add(addr)
-        val account = vm.accounts.get(Address.fromBytes(Bytes.wrap(address)))
+        val account = vm.accounts.get(addr)
         val beneficiaryAddress = Address.fromBytes(Bytes.wrap(beneficiary))
+        vm.accounts.computeIfAbsent(beneficiaryAddress) { AccountState(UInt256.ZERO, Wei.valueOf(0), Hash.fromBytes(MerklePatriciaTrie.storingBytes().rootHash()), Hash.hash(Bytes.EMPTY)) }
         account?.apply {
             val balance = balanceChanges.putIfAbsent(beneficiaryAddress, account.balance)
             balance?.let {
                 balanceChanges[beneficiaryAddress] = it.add(account.balance)
             }
         }
+        logger.trace("Done selfdestruct")
         return@runBlocking
     }
 
@@ -240,13 +252,14 @@ class EVMHostContext(
     override fun call(msg: ByteBuffer): ByteBuffer {
         logger.trace("Entering call")
         val evmMessage = EVMMessage.fromBytes(Bytes.wrapByteBuffer(msg))
-        val hostContext = EVMHostContext(vm, depth + 1, evmMessage.sender, evmMessage.destination, evmMessage.value, Bytes.EMPTY, evmMessage.inputData, evmMessage.gas)
+        val hostContext = EVMHostContext(vm, depth + 1, evmMessage.sender, evmMessage.destination, evmMessage.value, Bytes.EMPTY, evmMessage.gas)
         val result = vm.executeInternal(
                 evmMessage.sender,
                 evmMessage.destination,
                 evmMessage.value,
                 Bytes.EMPTY,
                 evmMessage.inputData,
+                evmMessage.inputDataSize,
                 evmMessage.gas,
                 depth = depth + 1,
                 hostContext = hostContext
@@ -265,24 +278,14 @@ class EVMHostContext(
      */
     override fun getTxContext(): ByteBuffer {
         logger.trace("Entering getTxContext")
-        //struct evmc_tx_context
-        //{
-        //    evmc_uint256be tx_gas_price;     /**< The transaction gas price. */
-        //    evmc_address tx_origin;          /**< The transaction origin account. */
-        //    evmc_address block_coinbase;     /**< The miner of the block. */
-        //    int64_t block_number;            /**< The block number. */
-        //    int64_t block_timestamp;         /**< The block timestamp. */
-        //    int64_t block_gas_limit;         /**< The block gas limit. */
-        //    evmc_uint256be block_difficulty; /**< The block difficulty. */
-        //    evmc_uint256be chain_id;         /**< The blockchain's ChainID. */
-        //};
-        return ByteBuffer.allocateDirect(160).put(Bytes.concatenate(Bytes32.leftPad(vm.gasPrice),
+
+        return alloc(160).put(Bytes.concatenate(Bytes32.leftPad(vm.gasPrice),
                 sender, vm.env.currentCoinbase!!, Bytes.ofUnsignedLong(vm.env.currentNumber!!.toLong()),
                 Bytes.ofUnsignedLong(vm.env.currentTimestamp!!.toLong()),
                 Bytes.ofUnsignedLong(vm.env.currentGasLimit!!.toLong()),
                 UInt256.fromBytes(vm.env.currentDifficulty!!).toBytes(),
                 UInt256.ONE.toBytes()
-                ).toArrayUnsafe())
+        ).toArrayUnsafe())
     }
 
     /**
@@ -298,7 +301,7 @@ class EVMHostContext(
      */
     override fun getBlockHash(number: Long): ByteBuffer {
         logger.trace("Entering getBlockHash")
-        return ByteBuffer.allocateDirect(32).put(blockHash!!.toArrayUnsafe())
+        return alloc(32).put(blockHash!!.toArrayUnsafe())
     }
 
     /**
@@ -317,5 +320,12 @@ class EVMHostContext(
     override fun emitLog(address: ByteArray, data: ByteArray, dataSize: Int, topics: Array<ByteArray>, topicCount: Int) {
         logger.trace("Entering emitLog")
         logs.add(Log(Address.fromBytes(Bytes.wrap(address)), Bytes.wrap(data), topics.map { Bytes32.wrap(it) }))
+    }
+
+    override fun close() {
+        buffers.forEach {
+            it.clear()
+        }
+        buffers.clear()
     }
 }

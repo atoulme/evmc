@@ -11,6 +11,8 @@ import org.slf4j.LoggerFactory
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
+
+
 /**
  * Types of EVM calls
  */
@@ -104,7 +106,8 @@ internal data class EVMMessage(
   val gas: Gas,
   val destination: Address,
   val sender: Address,
-  val inputData: Bytes,
+  val inputData: Long,
+  val inputDataSize: Int,
   val value: Bytes,
   val createSalt: Bytes32 = Bytes32.ZERO
 ) {
@@ -115,29 +118,32 @@ internal data class EVMMessage(
         message.getInt(0),
         message.getInt(4),
         message.getInt(8),
-        Gas.valueOf(message.getLong(8)),
-        Address.fromBytes(message.slice(20, 20)),
-        Address.fromBytes(message.slice(40, 20)),
-        message.slice(60, 8),
+        Gas.valueOf(message.getLong(16)),
+        Address.fromBytes(message.slice(24, 20)),
+        Address.fromBytes(message.slice(44, 20)),
+           message.getLong(64),
+              message.getInt(72),
         message.slice(76, 32),
-        message.slice(108, 32) as Bytes32
+        Bytes32.wrap(message.slice(108, 32))
       )
     }
   }
 
   fun toByteBuffer(): ByteBuffer {
+
     return ByteBuffer.allocateDirect(
-      4 + 4 + 4  + 8 + 20 + 20 + inputData.size() +
-        8 + 32 + createSalt.size()
-    )
+      4 + 4 + 4 + 4 + 8 + 20 + 20 + 8 +
+        4 + 32 + 32
+    ).order(ByteOrder.nativeOrder())
       .putInt(kind)
       .putInt(flags)
       .putInt(depth)
+            .putInt(0)// padding?
       .putLong(gas.toLong())
       .put(destination.toArrayUnsafe())
       .put(sender.toArrayUnsafe())
-      .put(inputData.toArrayUnsafe())
-      .putLong(inputData.size().toLong())
+      .putLong(inputData)
+      .putInt(inputDataSize)
       .put(Bytes32.leftPad(value).toArrayUnsafe())
       .put(createSalt.toArrayUnsafe())
   }
@@ -212,12 +218,13 @@ class EthereumVirtualMachine(
     inputData: Bytes,
     gas: Gas,
     callKind: CallKind = CallKind.EVMC_CALL,
-    revision: HardFork = HardFork.EVMC_MAX_REVISION,
+    revision: HardFork = HardFork.EVMC_BYZANTIUM,
     depth: Int = 0
   ): EVMResult {
-    val hostContext = EVMHostContext(this, depth, sender, destination, value, code, inputData, gas)
+    val hostContext = EVMHostContext(this, depth, sender, destination, value, code, gas)
+    val inputDataBuffer = ByteBuffer.allocateDirect(inputData.size()).put(inputData.toArrayUnsafe())
     val result =
-      executeInternal(sender, destination, value, code, inputData, gas, callKind, revision, depth, hostContext)
+      executeInternal(sender, destination, value, code, vm().address(inputDataBuffer), inputData.size(), gas, callKind, revision, depth, hostContext)
 
     return EVMResult.fromBytes(Bytes.wrapByteBuffer(result), hostContext)
   }
@@ -227,14 +234,17 @@ class EthereumVirtualMachine(
     destination: Address,
     value: Bytes,
     code: Bytes,
-    inputData: Bytes,
+    inputDataAddress: Long,
+    inputDataSize: Int,
     gas: Gas,
     callKind: CallKind = CallKind.EVMC_CALL,
     revision: HardFork = HardFork.EVMC_MAX_REVISION,
     depth: Int = 0,
     hostContext: HostContext
   ): ByteBuffer {
-    val msg = EVMMessage(callKind.number, 0, depth, gas, destination, sender, inputData, value).toByteBuffer()
+
+
+    val msg = EVMMessage(callKind.number, 0, depth, gas, destination, sender, inputDataAddress, inputDataSize, value).toByteBuffer()
 
     val result = vm().execute(
       hostContext,

@@ -146,7 +146,8 @@ final class Host {
   }
 
   static void removeContext(int index) {
-    contextList.remove(index);
+    HostContext context = contextList.remove(index);
+    context.close();
   }
 
   private static List<HostContext> contextList = Collections.synchronizedList(new ArrayList<>());

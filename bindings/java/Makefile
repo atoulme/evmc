@@ -31,8 +31,10 @@ $(CURDIR)/java/src/test/resources/libevmc.so: docker-linux build
 
 compile:
 	mkdir -p $(BUILD_DIR)
-	(cd $(BUILD_DIR) && cmake $(SOURCE_DIR) -DCMAKE_INSTALL_PREFIX=$(OUT_DIR) -DEVMC_JAVA=ON -DJAVA_HOME=$(JAVA_HOME) -DEVMC_EXAMPLES=ON)
+	(cd $(BUILD_DIR) && cmake $(SOURCE_DIR) -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=$(OUT_DIR) -DEVMC_JAVA=ON -DJAVA_HOME=$(JAVA_HOME) -DEVMC_EXAMPLES=ON)
 	cmake --build $(OUT_DIR)/_cmake_build --target install
+	cp $(OUT_DIR)/lib/libevmc-java.dylib $(CURDIR)/java/src/test/resources/libevmc.dylib
+	cp $(OUT_DIR)/lib/libexample-vm.dylib $(CURDIR)/java/src/test/resources/libexample-vm.dylib
 
 clean:
 	rm -rf $(OUT_DIR)
