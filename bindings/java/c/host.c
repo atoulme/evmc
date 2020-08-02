@@ -10,8 +10,6 @@
 
 static JavaVM* jvm;
 
-const bool DEBUG = false;
-
 int evmc_java_set_jvm(JNIEnv* jenv)
 {
     #ifdef DEBUG

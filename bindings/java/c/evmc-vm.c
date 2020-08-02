@@ -14,7 +14,9 @@
 
 static void throw_java_assert(JNIEnv* jenv, const char* msg)
 {
+    #ifdef DEBUG
     printf("Entering throw_java_assert\n");
+    #endif
     jclass jcls = (*jenv)->FindClass(jenv, "java/lang/AssertionError");
     (*jenv)->ThrowNew(jenv, jcls, msg);
 }
@@ -24,7 +26,9 @@ JNIEXPORT jobject JNICALL Java_org_ethereum_evmc_EvmcVm_init(JNIEnv* jenv,
                                                              jstring jfilename)
 {
     (void)jcls;
+    #ifdef DEBUG
     printf("Entering init\n");
+    #endif
     struct evmc_vm* evm = NULL;
     jint rs = evmc_java_set_jvm(jenv);
     (void)rs;
@@ -50,7 +54,9 @@ JNIEXPORT jint JNICALL Java_org_ethereum_evmc_EvmcVm_abi_1version(JNIEnv* jenv, 
 {
     (void)jenv;
     (void)jcls;
+    #ifdef DEBUG
     printf("Entering version\n");
+    #endif
     return EVMC_ABI_VERSION;
 }
 
@@ -59,7 +65,9 @@ JNIEXPORT jstring JNICALL Java_org_ethereum_evmc_EvmcVm_name(JNIEnv* jenv,
                                                              jobject jevm)
 {
     (void)jcls;
+    #ifdef DEBUG
     printf("Entering name\n");
+    #endif
     struct evmc_vm* evm = (struct evmc_vm*)(*jenv)->GetDirectBufferAddress(jenv, jevm);
     assert(evm != NULL);
     const char* evm_name = evmc_vm_name(evm);
@@ -71,7 +79,9 @@ JNIEXPORT jstring JNICALL Java_org_ethereum_evmc_EvmcVm_version(JNIEnv* jenv,
                                                                 jobject jevm)
 {
     (void)jcls;
+    #ifdef DEBUG
     printf("Entering version\n");
+    #endif
     struct evmc_vm* evm = (struct evmc_vm*)(*jenv)->GetDirectBufferAddress(jenv, jevm);
     assert(evm != NULL);
     const char* evm_version = evmc_vm_version(evm);
@@ -83,7 +93,9 @@ JNIEXPORT void JNICALL Java_org_ethereum_evmc_EvmcVm_destroy(JNIEnv* jenv,
                                                              jobject jevm)
 {
     (void)jcls;
+    #ifdef DEBUG
     printf("Entering destroy\n");
+    #endif
     struct evmc_vm* evm = (struct evmc_vm*)(*jenv)->GetDirectBufferAddress(jenv, jevm);
     assert(evm != NULL);
     evmc_destroy(evm);
@@ -100,7 +112,9 @@ JNIEXPORT void JNICALL Java_org_ethereum_evmc_EvmcVm_execute(JNIEnv* jenv,
                                                              jobject jresult)
 {
     (void)jcls;
+    #ifdef DEBUG
     printf("Entering execute\n");
+    #endif
     struct evmc_message* msg = (struct evmc_message*)(*jenv)->GetDirectBufferAddress(jenv, jmsg);
     assert(msg != NULL);
     const uint8_t* code = (uint8_t*)(*jenv)->GetDirectBufferAddress(jenv, jcode);
@@ -121,7 +135,9 @@ JNIEXPORT jint JNICALL Java_org_ethereum_evmc_EvmcVm_get_1capabilities(JNIEnv* j
                                                                        jobject jevm)
 {
     (void)jcls;
+    #ifdef DEBUG
     printf("Entering get_capabilities\n");
+    #endif
     struct evmc_vm* evm = (struct evmc_vm*)(*jenv)->GetDirectBufferAddress(jenv, jevm);
     assert(evm != NULL);
     return (jint)evm->get_capabilities(evm);
@@ -134,7 +150,9 @@ JNIEXPORT jint JNICALL Java_org_ethereum_evmc_EvmcVm_set_1option(JNIEnv* jenv,
                                                                  jstring jval)
 {
     (void)jcls;
+    #ifdef DEBUG
     printf("Entering set_option\n");
+    #endif
     struct evmc_vm* evm = (struct evmc_vm*)(*jenv)->GetDirectBufferAddress(jenv, jevm);
     assert(evm != NULL);
     const char* name = (*jenv)->GetStringUTFChars(jenv, jname, 0);
@@ -150,7 +168,9 @@ JNIEXPORT jint JNICALL Java_org_ethereum_evmc_EvmcVm_set_1option(JNIEnv* jenv,
 JNIEXPORT jlong JNICALL Java_org_ethereum_evmc_EvmcVm_address(JNIEnv* jenv, jclass jcls, jobject buf)
 {
     (void)jcls;
+    #ifdef DEBUG
     printf("Entering address\n");
+    #endif
     void* p = (*jenv)->GetDirectBufferAddress(jenv, buf);
     return (jlong)p;
 }
@@ -159,6 +179,8 @@ JNIEXPORT jint JNICALL Java_org_ethereum_evmc_EvmcVm_get_1result_1size(JNIEnv* j
 {
     (void)jenv;
     (void)jcls;
+    #ifdef DEBUG
     printf("Entering get_result_size\n");
+    #endif
     return sizeof(struct evmc_result);
 }
