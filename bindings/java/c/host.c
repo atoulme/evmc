@@ -12,11 +12,17 @@ static JavaVM* jvm;
 
 int evmc_java_set_jvm(JNIEnv* jenv)
 {
+#ifdef DEBUG
+    printf("Entering set_jvm\n");
+#endif
     return (*jenv)->GetJavaVM(jenv, &jvm);
 }
 
 static JNIEnv* attach()
 {
+#ifdef DEBUG
+    printf("Entering attach\n");
+#endif
     JNIEnv* jenv;
     jint rs = (*jvm)->AttachCurrentThread(jvm, (void**)&jenv, NULL);
     (void)rs;
@@ -27,6 +33,9 @@ static JNIEnv* attach()
 // Why isn't this helper part of JNI?
 static jbyteArray CopyDataToJava(JNIEnv* jenv, const void* ptr, size_t size)
 {
+#ifdef DEBUG
+    printf("Entering copydatatojava\n");
+#endif
     jbyteArray ret = (*jenv)->NewByteArray(jenv, (jsize)size);
     assert(ret != NULL);
     (*jenv)->SetByteArrayRegion(jenv, ret, 0, (jsize)size, (jbyte*)ptr);
